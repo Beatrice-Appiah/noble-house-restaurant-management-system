@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Noble House RMS | Customer Orders</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="header">
+    Noble House RMS – Customer Orders
+  </div>
+
+  <div class="container">
+    
+    <div class="nav-bar">
+      <a href="/dashboard" class="btn-back">⬅ Back to Dashboard</a>
+    </div>
+
+    <h2 class="section-title">Add New Order</h2>
+
+    <form id="orderForm" class="order-form">
+      
+      <div class="input-group">
+        <label>Food Item</label>
+        <input type="text" id="food_item" placeholder="e.g. Jollof Rice with Chicken" required>
+      </div>
+
+      <div class="form-row">
+        <div class="input-group" style="flex:1">
+          <label>Quantity</label>
+          <input type="number" id="quantity" placeholder="1" required>
+        </div>
+        <div class="input-group" style="flex:1">
+          <label>Price (GHS)</label>
+          <input type="number" id="price" placeholder="0.00" step="0.01" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit">Add Order</button>
+    </form>
+
+    <p id="orderMessage" class="status-msg"></p>
+
+    <hr class="divider">
+
+    <h3 class="section-title">Recent Orders</h3>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Food Item</th>
+            <th>Qty</th>
+            <th>Price (GHS)</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTable"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+<script>
+  // 1. Select Elements Safely
+  const form = document.getElementById("orderForm");
+  const message = document.getElementById("orderMessage");
+  const ordersTable = document.getElementById("ordersTable");
+
+  // 2. Add Submit Listener
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault(); // Stop page reload
+
+    // Debug: Log to console to prove button works
+    console.log("Button clicked. collecting data...");
+    message.textContent = "⏳ Submitting...";
+    message.style.color = "blue";
+
+    // 3. Get Values explicitly
+    const foodItem = document.getElementById("food_item").value;
+    const qty = document.getElementById("quantity").value;
+    const priceVal = document.getElementById("price").value;
+
+    // Create data object (Convert numbers to verify backend accepts them)
+    const data = {
+      food_item: foodItem,
+      quantity: Number(qty), 
+      price: Number(priceVal)
+    };
+
+    try {
+      // 4. Send to Server
+      const res = await fetch("/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      // 5. Check Server Response
+      if (res.ok) {
+        message.textContent = "✅ Order added successfully";
+        message.style.color = "green";
+        form.reset(); // Clear inputs
+        loadOrders(); // Refresh table
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => message.textContent = "", 3000);
+      } else {
+        // If Server returns 400 or 500
+        const errText = await res.text();
+        console.error("Server Error:", errText);
+        message.textContent = "❌ Failed to add order. Check Console.";
+        message.style.color = "red";
+      }
+    } catch (err) {
+      console.error("Network Error:", err);
+      message.textContent = "❌ Network Error (Is server running?)";
+      message.style.color = "red";
+    }
+  });
+
+  // 6. Load Orders Function
+  async function loadOrders() {
+    try {
+      const res = await fetch("/orders");
+      if (!res.ok) throw new Error("Failed to fetch list");
+
+      const orders = await res.json();
+      
+      // Safety Check: Ensure orders is actually a list
+      if (!Array.isArray(orders)) {
+        console.error("Expected array but got:", orders);
+        return;
+      }
+
+      ordersTable.innerHTML = "";
+      
+      // Loop through and display
+      orders.forEach(o => {
+        ordersTable.innerHTML += `
+          <tr>
+            <td>${o.food_item}</td>
+            <td>${o.quantity}</td>
+            <td>${parseFloat(o.price).toFixed(2)}</td>
+            <td>${new Date(o.created_at).toLocaleString()}</td>
+          </tr>
+        `;
+      });
+    } catch (error) {
+      console.error("Error loading orders:", error);
+    }
+  }
+
+  // Initial Load
+  loadOrders();
+</script>
+
+</body>
+</html>

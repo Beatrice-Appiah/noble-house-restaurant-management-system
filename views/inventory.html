@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Noble House RMS | Inventory</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <div class="header">
+    Noble House RMS – Inventory Management
+  </div>
+
+  <div class="container">
+    
+    <div class="nav-bar">
+      <a href="/dashboard" class="btn-back">⬅ Back to Dashboard</a>
+    </div>
+
+    <h2 class="section-title">Manage Inventory</h2>
+
+    <form id="inventoryForm" class="order-form">
+      
+      <div class="form-row">
+        <div class="input-group" style="flex:2">
+          <label>Item Name</label>
+          <input type="text" id="item_name" placeholder="e.g. Rice (50kg Bag)" required>
+        </div>
+
+        <div class="input-group" style="flex:1">
+          <label>Quantity</label>
+          <input type="number" id="quantity" placeholder="0" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit">Add to Inventory</button>
+    </form>
+
+    <p id="msg" class="status-msg"></p>
+
+    <hr class="divider">
+
+    <h3 class="section-title">Current Stock</h3>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Last Updated</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryTable"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+<script>
+  const form = document.getElementById("inventoryForm");
+  const msg = document.getElementById("msg");
+  const table = document.getElementById("inventoryTable");
+
+  // 1. Handle Form Submit
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg.textContent = "Processing...";
+
+    const data = {
+      item_name: document.getElementById("item_name").value,
+      quantity: Number(document.getElementById("quantity").value)
+    };
+
+    try {
+      // UPDATED URL HERE 👇
+      const res = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        msg.textContent = "✅ Item added successfully";
+        msg.style.color = "green";
+        form.reset();
+        loadInventory();
+        setTimeout(() => msg.textContent = "", 3000);
+      } else {
+        msg.textContent = "❌ Failed to add item";
+        msg.style.color = "red";
+      }
+    } catch (err) {
+      console.error(err);
+      msg.textContent = "❌ Server Error";
+      msg.style.color = "red";
+    }
+  });
+
+  // 2. Load Inventory List
+  async function loadInventory() {
+    try {
+      // UPDATED URL HERE 👇
+      const res = await fetch("/api/inventory");
+      const items = await res.json();
+
+      table.innerHTML = "";
+      
+      if (items.length === 0) {
+        table.innerHTML = "<tr><td colspan='3' style='text-align:center'>No inventory items found</td></tr>";
+        return;
+      }
+
+      items.forEach(item => {
+        table.innerHTML += `
+          <tr>
+            <td>${item.item_name}</td>
+            <td>${item.quantity}</td>
+            <td>${new Date(item.created_at || Date.now()).toLocaleString()}</td>
+          </tr>
+        `;
+      });
+    } catch (err) {
+      console.error("Error loading inventory:", err);
+    }
+  }
+
+  loadInventory();
+</script>
+
+</body>
+</html>
